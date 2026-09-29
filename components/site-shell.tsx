@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from "firebase/auth";
 import { categories, formatDate, getCategory, getCategoryPosts, getExcerpt, getPostBySlug, getPostCategory, getSortedPosts, setContentData, type Post } from "@/lib/content";
 import { firebaseAuth } from "@/lib/firebase";
 import { getAdminStatus, loadAdminPosts, loadPublishedContent, removePost, savePost, updatePost } from "@/lib/content-store";
+import { loadMathJax } from "@/components/mathjax-loader";
 
 type SiteShellProps = { route: string[] };
 const SITE_BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -138,5 +139,48 @@ function PostCard({ post }: { post: Post }) { const category = getPostCategory(p
 function EmptyState({ text }: { text: string }) { return <div className="empty-state"><span>∅</span><p>{text}</p></div>; }
 function NotFoundPage() { return <div className="page-stack not-found"><p className="eyebrow">404 / NOTHING HERE</p><h1>이 페이지는 아직 안 만듦.</h1><Link className="button-link" href="/">홈으로</Link></div>; }
 
-function MarkdownContent({ source }: { source: string }) { useEffect(() => { const mathJax = (window as Window & { MathJax?: { typesetPromise?: () => Promise<void> } }).MathJax; void mathJax?.typesetPromise?.(); }, [source]); const blocks = source.trim().split(/\n{2,}/); return <div className="markdown-content">{blocks.map((block, index) => { const key = `${index}-${block.slice(0, 12)}`; if (block.startsWith("```")) { const lines = block.split("\n"); return <pre key={key} data-language={lines[0].replace("```", "").trim()}><code>{lines.slice(1, -1).join("\n")}</code></pre>; } if (/^#{1,3} /.test(block)) { const level = block.match(/^#+/)?.[0].length ?? 2; const text = block.replace(/^#{1,3} /, ""); return level === 1 ? <h2 key={key}>{renderInline(text)}</h2> : <h3 key={key}>{renderInline(text)}</h3>; } if (/^> /.test(block)) return <blockquote key={key}>{renderInline(block.replace(/^> /, ""))}</blockquote>; if (/^(?:- |\* )/.test(block)) return <ul key={key}>{block.split("\n").map((line) => <li key={line}>{renderInline(line.replace(/^(?:- |\* )/, ""))}</li>)}</ul>; if (block.startsWith("\\[") || block.startsWith("$$")) return <div className="math-block" key={key}>{block}</div>; if (/^!\[.*\]\(.*\)$/.test(block)) { const match = block.match(/^!\[(.*)\]\((.*)\)$/); return match ? <figure key={key}><img src={match[2]} alt={match[1]} /><figcaption>{match[1]}</figcaption></figure> : null; } return <p key={key}>{block.split("\n").map((line, lineIndex) => <span key={`${key}-${lineIndex}`}>{lineIndex ? <br /> : null}{renderInline(line)}</span>)}</p>; })}</div>; }
+function MarkdownContent({ source }: { source: string }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = contentRef.current;
+    let cancelled = false;
+    if (!element) return;
+
+    void loadMathJax()
+      .then((mathJax) => {
+        if (cancelled) return;
+        return mathJax.typesetPromise?.([element]);
+      })
+      .catch((error: unknown) => {
+        console.error("Could not render math in this post.", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [source]);
+
+  const blocks = source.trim().split(/\n{2,}/);
+  return <div ref={contentRef} className="markdown-content">{blocks.map((block, index) => {
+    const key = `${index}-${block.slice(0, 12)}`;
+    if (block.startsWith("```")) {
+      const lines = block.split("\n");
+      return <pre key={key} data-language={lines[0].replace("```", "").trim()}><code>{lines.slice(1, -1).join("\n")}</code></pre>;
+    }
+    if (/^#{1,3} /.test(block)) {
+      const level = block.match(/^#+/)?.[0].length ?? 2;
+      const text = block.replace(/^#{1,3} /, "");
+      return level === 1 ? <h2 key={key}>{renderInline(text)}</h2> : <h3 key={key}>{renderInline(text)}</h3>;
+    }
+    if (/^> /.test(block)) return <blockquote key={key}>{renderInline(block.replace(/^> /, ""))}</blockquote>;
+    if (/^(?:- |\* )/.test(block)) return <ul key={key}>{block.split("\n").map((line) => <li key={line}>{renderInline(line.replace(/^(?:- |\* )/, ""))}</li>)}</ul>;
+    if (block.startsWith("\\[") || block.startsWith("$$")) return <div className="math-block" key={key}>{block}</div>;
+    if (/^!\[.*\]\(.*\)$/.test(block)) {
+      const match = block.match(/^!\[(.*)\]\((.*)\)$/);
+      return match ? <figure key={key}><img src={match[2]} alt={match[1]} /><figcaption>{match[1]}</figcaption></figure> : null;
+    }
+    return <p key={key}>{block.split("\n").map((line, lineIndex) => <span key={`${key}-${lineIndex}`}>{lineIndex ? <br /> : null}{renderInline(line)}</span>)}</p>;
+  })}</div>;
+}
 function renderInline(text: string) { const tokens = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^\)]+\)|\\\([^\)]+\\\)|\$[^$]+\$)/g).filter(Boolean); return tokens.map((token, index) => { const key = `${token}-${index}`; if (token.startsWith("**") && token.endsWith("**")) return <strong key={key}>{token.slice(2, -2)}</strong>; if (token.startsWith("`") && token.endsWith("`")) return <code key={key}>{token.slice(1, -1)}</code>; const link = token.match(/^\[([^\]]+)\]\(([^\)]+)\)$/); if (link) return <a key={key} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>; if (token.startsWith("\\(") || token.startsWith("$")) return <span className="math-inline" key={key}>{token}</span>; return <span key={key}>{token}</span>; }); }
