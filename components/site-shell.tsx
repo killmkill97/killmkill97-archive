@@ -161,13 +161,14 @@ function MarkdownContent({ source }: { source: string }) {
     };
   }, [source]);
 
-  const blocks = source.trim().split(/\n{2,}/);
+  const blocks = splitMarkdownBlocks(source);
   return <div ref={contentRef} className="markdown-content">{blocks.map((block, index) => {
     const key = `${index}-${block.slice(0, 12)}`;
     if (block.startsWith("```")) {
       const lines = block.split("\n");
       return <pre key={key} data-language={lines[0].replace("```", "").trim()}><code>{lines.slice(1, -1).join("\n")}</code></pre>;
     }
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(block)) return <hr className="markdown-rule" key={key} />;
     if (/^#{1,3} /.test(block)) {
       const level = block.match(/^#+/)?.[0].length ?? 2;
       const text = block.replace(/^#{1,3} /, "");
@@ -183,4 +184,44 @@ function MarkdownContent({ source }: { source: string }) {
     return <p key={key}>{block.split("\n").map((line, lineIndex) => <span key={`${key}-${lineIndex}`}>{lineIndex ? <br /> : null}{renderInline(line)}</span>)}</p>;
   })}</div>;
 }
+
+function splitMarkdownBlocks(source: string) {
+  const blocks: string[] = [];
+  let lines: string[] = [];
+  let inCodeBlock = false;
+  const flush = () => {
+    if (lines.length) blocks.push(lines.join("\n"));
+    lines = [];
+  };
+
+  for (const line of source.trim().split("\n")) {
+    if (line.startsWith("```")) {
+      if (inCodeBlock) {
+        lines.push(line);
+        flush();
+        inCodeBlock = false;
+      } else {
+        flush();
+        lines.push(line);
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      lines.push(line);
+    } else if (/^\s*$/.test(line)) {
+      flush();
+    } else if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      flush();
+      blocks.push(line.trim());
+    } else {
+      lines.push(line);
+    }
+  }
+
+  flush();
+  return blocks;
+}
+
 function renderInline(text: string) { const tokens = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^\)]+\)|\\\([^\)]+\\\)|\$[^$]+\$)/g).filter(Boolean); return tokens.map((token, index) => { const key = `${token}-${index}`; if (token.startsWith("**") && token.endsWith("**")) return <strong key={key}>{token.slice(2, -2)}</strong>; if (token.startsWith("`") && token.endsWith("`")) return <code key={key}>{token.slice(1, -1)}</code>; const link = token.match(/^\[([^\]]+)\]\(([^\)]+)\)$/); if (link) return <a key={key} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>; if (token.startsWith("\\(") || token.startsWith("$")) return <span className="math-inline" key={key}>{token}</span>; return <span key={key}>{token}</span>; }); }
