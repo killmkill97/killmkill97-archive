@@ -1,5 +1,8 @@
 import vinext from "vinext";
-import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig, loadEnv } from "vite";
 import hostingConfig from "./.openai/hosting.json";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { sites } from "./build/sites-vite-plugin";
@@ -7,6 +10,7 @@ import { connectorPreview } from "./build/connector-preview-plugin.mjs";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
+const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 
 const { d1, r2 } = hostingConfig;
 
@@ -36,7 +40,7 @@ const localBindingConfig = {
     : [],
 };
 
-export default defineConfig(async ({ command }) => {
+export default defineConfig(async ({ command, mode }) => {
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
   process.env.WRANGLER_SEND_METRICS ??= "false";
@@ -47,6 +51,38 @@ export default defineConfig(async ({ command }) => {
   process.env.WRANGLER_LOG_PATH ??= ".wrangler/logs";
   process.env.WRANGLER_REGISTRY_PATH ??= ".wrangler/dev-registry";
   process.env.MINIFLARE_REGISTRY_PATH ??= ".wrangler/registry";
+
+  // GitHub Pages serves only static files. Keep its build independent from
+  // the Sites/Cloudflare Worker plugins used by the original hosted preview.
+  if (process.env.GITHUB_PAGES === "true") {
+    const env = loadEnv(mode, projectRoot, "NEXT_PUBLIC_");
+    const firebaseKeys = [
+      "NEXT_PUBLIC_FIREBASE_API_KEY",
+      "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+      "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+      "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+      "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+      "NEXT_PUBLIC_FIREBASE_APP_ID",
+    ];
+
+    return {
+      root: resolve(projectRoot, "github-pages"),
+      base: "/killmkill97-archive/",
+      publicDir: resolve(projectRoot, "public"),
+      resolve: { alias: { "@": projectRoot } },
+      plugins: [react()],
+      define: Object.fromEntries(
+        firebaseKeys.map((key) => [
+          `process.env.${key}`,
+          JSON.stringify(process.env[key] ?? env[key] ?? ""),
+        ]),
+      ),
+      build: {
+        outDir: resolve(projectRoot, "dist/github-pages"),
+        emptyOutDir: true,
+      },
+    };
+  }
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");

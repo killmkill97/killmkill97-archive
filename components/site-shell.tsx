@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from "firebase/auth";
 import { categories, formatDate, getCategory, getCategoryPosts, getExcerpt, getPostBySlug, getPostCategory, getSortedPosts, setContentData, type Post } from "@/lib/content";
@@ -8,11 +7,34 @@ import { firebaseAuth } from "@/lib/firebase";
 import { getAdminStatus, loadAdminPosts, loadPublishedContent, removePost, savePost, updatePost } from "@/lib/content-store";
 
 type SiteShellProps = { route: string[] };
+const SITE_BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 const navItems = [{ href: "/", label: "홈" }, { href: "/all", label: "모든 글" }, { href: "/toc", label: "목차" }, { href: "/about", label: "소개" }];
 
 export function SiteShell({ route }: SiteShellProps) {
   const [dark, setDark] = useState(false);
+  const [activeRoute, setActiveRoute] = useState(route);
   const [, setContentVersion] = useState(0);
+
+  useEffect(() => {
+    function syncRoute() {
+      const current = new URL(window.location.href);
+      const requestedRoute = current.searchParams.get("__gh_route");
+
+      if (requestedRoute) {
+        const target = new URL(requestedRoute, window.location.origin);
+        if (target.origin !== window.location.origin) return;
+        window.history.replaceState(null, "", `${target.pathname}${target.search}${target.hash}`);
+        setActiveRoute(routeFromPath(target.pathname));
+        return;
+      }
+
+      setActiveRoute(routeFromPath(current.pathname));
+    }
+
+    syncRoute();
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("killmkill97-theme");
@@ -39,10 +61,26 @@ export function SiteShell({ route }: SiteShellProps) {
     return () => { active = false; };
   }, []);
 
-  return <div className="site-frame"><Header dark={dark} onToggleTheme={() => setDark((value) => !value)} /><main className="site-main"><div className="archive-rule" aria-hidden="true" />{route.length === 0 ? <HomePage /> : null}{route[0] === "all" ? <AllPostsPage /> : null}{route[0] === "toc" ? <TocPage /> : null}{route[0] === "about" ? <AboutPage /> : null}{route[0] === "category" && route[1] ? <CategoryPage categoryId={route[1]} /> : null}{route[0] === "post" && route[1] ? <PostPage slug={route[1]} /> : null}{route[0] === "admin" ? <AdminEditor /> : null}{!isKnownRoute(route) ? <NotFoundPage /> : null}</main><footer className="site-footer"><span>killmkill97의 개인 사이트</span><span>그냥 내가 만든 거랑 생각난 거 올리는 곳</span></footer></div>;
+  return <div className="site-frame"><Header dark={dark} onToggleTheme={() => setDark((value) => !value)} /><main className="site-main"><div className="archive-rule" aria-hidden="true" />{activeRoute.length === 0 ? <HomePage /> : null}{activeRoute[0] === "all" ? <AllPostsPage /> : null}{activeRoute[0] === "toc" ? <TocPage /> : null}{activeRoute[0] === "about" ? <AboutPage /> : null}{activeRoute[0] === "category" && activeRoute[1] ? <CategoryPage categoryId={activeRoute[1]} /> : null}{activeRoute[0] === "post" && activeRoute[1] ? <PostPage slug={activeRoute[1]} /> : null}{activeRoute[0] === "admin" ? <AdminEditor /> : null}{!isKnownRoute(activeRoute) ? <NotFoundPage /> : null}</main><footer className="site-footer"><span>killmkill97의 개인 사이트</span><span>그냥 내가 만든 거랑 생각난 거 올리는 곳</span></footer></div>;
 }
 
 function isKnownRoute(route: string[]) { if (route.length === 0) return true; if (["all", "toc", "about", "admin"].includes(route[0])) return route.length === 1; if (["category", "post"].includes(route[0])) return Boolean(route[1]) && route.length === 2; return false; }
+function routeFromPath(pathname: string) {
+  const path = SITE_BASE_PATH && (pathname === SITE_BASE_PATH || pathname === `${SITE_BASE_PATH}/`)
+    ? "/"
+    : SITE_BASE_PATH && pathname.startsWith(`${SITE_BASE_PATH}/`)
+      ? pathname.slice(SITE_BASE_PATH.length)
+      : pathname;
+  return path.split("/").filter(Boolean).map((part) => {
+    try { return decodeURIComponent(part); } catch { return part; }
+  });
+}
+
+function Link({ href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
+  const destination = href.startsWith("/") ? `${SITE_BASE_PATH}${href}` : href;
+  return <a href={destination} {...props} />;
+}
+
 function Header({ dark, onToggleTheme }: { dark: boolean; onToggleTheme: () => void }) { return <header className="site-header"><Link className="brand" href="/" aria-label="killmkill97 홈"><span className="brand-mark" aria-hidden="true">k/</span><span>killmkill97</span></Link><nav className="top-nav" aria-label="주요 메뉴">{navItems.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}</nav><button className="theme-toggle" type="button" onClick={onToggleTheme} aria-label={dark ? "라이트 모드로 바꾸기" : "다크 모드로 바꾸기"}><span aria-hidden="true">{dark ? "☼" : "☾"}</span><span className="theme-label">{dark ? "밝게" : "어둡게"}</span></button></header>; }
 
 function HomePage() { const recent = getSortedPosts().slice(0, 6); const categoryCount = categories.filter((category) => !category.parentId).length; return <div className="page-stack home-page"><section className="intro-block"><p className="eyebrow">PERSONAL ARCHIVE / 2026—</p><h1>killmkill97의<br /><em>개인 사이트</em></h1><p className="intro-copy">수학도 하고, 마크도 하고, 게임도 만들고, 가끔은 그냥 이상한 걸 발견함.</p><div className="intro-meta"><span>posts {getSortedPosts().length}</span><span>categories {categoryCount}</span><span>last updated {recent[0] ? formatDate(recent[0].updatedAt) : "—"}</span></div></section><section className="section-block"><div className="section-heading"><div><p className="eyebrow">RECENTLY WRITTEN</p><h2>최근 글</h2></div><Link className="text-link" href="/all">모든 글 보기 <span>↗</span></Link></div><div className="post-list">{recent.map((post) => <PostCard key={post.id} post={post} />)}</div></section><section className="home-scrap"><span className="scrap-label">메모</span><p>이번 주엔 또 뭘 만들지 모르겠음. 일단 기록은 해두자.</p><span className="scrap-mark">*</span></section></div>; }

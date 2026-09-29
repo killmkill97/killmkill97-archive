@@ -16,6 +16,12 @@ node node_modules/typescript/bin/tsc --noEmit
 node scripts/run-framework.mjs build
 ```
 
+GitHub Pages용 정적 빌드는 다음 명령으로 확인한다.
+
+```bash
+pnpm build:github-pages
+```
+
 ## 주요 구조
 
 - `app/[[...slug]]/page.tsx`: 홈, 모든 글, 목차, 소개, 카테고리, 글 페이지
@@ -30,9 +36,24 @@ node scripts/run-framework.mjs build
 
 글의 `content`는 Markdown 문자열이다. 제목, 굵은 글씨, 링크, 이미지, 코드 블록, 인용문, 목록, 인라인/블록 수식을 사용할 수 있다. 수식은 `\\[ ... \\]`, `$$ ... $$`, `\\( ... \\)` 또는 `$ ... $` 형식으로 적는다.
 
+## GitHub Pages 배포
+
+`main`에 푸시하면 `.github/workflows/github-pages.yml`이 정적 사이트를 빌드하고 GitHub Pages에 배포한다. 저장소 주소가 하위 경로를 쓰므로 빌드 경로는 `/killmkill97-archive/`로 설정되어 있다. 글/카테고리는 브라우저에서 Firestore를 읽고, 관리자 글쓰기도 기존 Firebase 로그인을 사용한다.
+
+처음 한 번은 GitHub 저장소의 **Settings → Pages → Build and deployment → Source**를 `GitHub Actions`로 설정한다. 그리고 **Settings → Secrets and variables → Actions → New repository secret**에서 `.env.local`의 Firebase 웹 설정 여섯 값을 같은 이름으로 등록한다.
+
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+
+이 값들은 브라우저용 설정이라 배포 결과에서는 공개된다. 저장소 소스에 직접 적지 않기 위해 Actions secrets로 전달하며, 관리자 비밀번호나 서비스 계정 키를 여기에 넣으면 안 된다. Firebase Authentication의 승인된 도메인에도 `killmkill97.github.io`를 추가해야 Google 로그인이 동작한다.
+
 ## Firebase 연결
 
-로컬에서는 `.env.local`에 Firebase 웹 설정을 넣는다. 이 값은 브라우저용 Firebase 설정이라 공개될 수 있지만, 관리자용 secret이나 서비스 계정 키는 절대 넣지 않는다. 배포할 때는 같은 `NEXT_PUBLIC_FIREBASE_*` 변수들을 호스팅 환경 변수에도 등록해야 한다.
+로컬에서는 `.env.local`에 Firebase 웹 설정을 넣는다. 이 값은 브라우저용 Firebase 설정이라 공개될 수 있지만, 관리자용 secret이나 서비스 계정 키는 절대 넣지 않는다.
 
 필요한 변수 이름은 `.env.example`에 있다.
 

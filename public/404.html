@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>페이지를 여는 중 · killmkill97</title>
+  </head>
+  <body>
+    <p>페이지를 여는 중...</p>
+    <script>
+      const basePath = "/killmkill97-archive";
+      const current = new URL(window.location.href);
+      const requestedPath = current.pathname + current.search + current.hash;
+      window.location.replace(
+        `${basePath}/?__gh_route=${encodeURIComponent(requestedPath)}`,
+      );
+    </script>
+  </body>
+</html>
