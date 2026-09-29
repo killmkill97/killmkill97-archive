@@ -35,58 +35,7 @@ export let categories: Category[] = [
   { id: "lore", name: "로어", description: "어센디드들의 이야기", parentId: "numerical-ascension", accent: "#8864b5" },
 ];
 
-export let posts: Post[] = [
-  {
-    id: "post-c8", slug: "c8-is-fun", title: "C(8) 이거 개재밌네 ㅋㅋㅋ", category: "c", tags: ["거대수", "C", "수학"],
-    createdAt: "2026-09-29T14:20:00+09:00", updatedAt: "2026-09-29T14:20:00+09:00",
-    content: `지피티랑 대화하면서 만들어보고 있는데 처음에는 그냥 압축 가지고 놀려고 만든 거였음. 근데 만들다 보니까 일이 존나 커짐.\n\n## 지금 생각\n\n아직 정의가 좀 덜 예쁜데 이런 식으로 커지는 건 재밌다.\n\n\\[ C(8) \\ge SSCG(3) > TREE(3) \\]`,
-  },
-  {
-    id: "post-phobos", slug: "making-phobos", title: "포보스 만들어보고있는데", category: "minecraft", tags: ["마크", "모드팩", "포보스"],
-    createdAt: "2026-09-28T19:05:00+09:00", updatedAt: "2026-09-28T19:05:00+09:00",
-    content: `이거 컴퓨터처럼 생겼는데 무시하지 마셈. 아무튼 지금 밸런스 조정하는데 존나 어려움.\n\n> 기계는 많아지는데 플레이어가 행복해지는지는 모르겠음.`,
-  },
-  {
-    id: "post-bug-calculator", slug: "big-number-calculator-bug", title: "큰 수 계산기 확장하다가 버그났다", category: "development", tags: ["Numerical Ascension", "개발", "버그"],
-    createdAt: "2026-09-27T23:41:00+09:00", updatedAt: "2026-09-28T00:12:00+09:00",
-    content: `아니 이거 맞냐? 3일이나 고치고 있는데 숫자가 커질수록 더 이상해짐.\n\n\`\`\`ts\nconst next = current.multiply(multiplier).normalize();\n\`\`\`\n\n일단 오늘은 여기까지.`,
-  },
-  {
-    id: "post-ultimate-machine", slug: "ultimate-machine", title: "얼티메이트 머신 만들었는데", category: "ultimate", tags: ["지메", "얼티메이트"],
-    createdAt: "2026-09-26T16:30:00+09:00", updatedAt: "2026-09-26T16:30:00+09:00",
-    content: `누가 디자인해주냐 제발 아무나 지원 좀.\n\n기능은 괜찮은데 화면이 너무 공장 같음.`,
-  },
-  {
-    id: "post-mdan", slug: "mdan-is-mid", title: "MDAN 솔직히 별로임", category: "large-numbers", tags: ["거대수", "MDAN"],
-    createdAt: "2026-09-25T10:10:00+09:00", updatedAt: "2026-09-25T10:10:00+09:00",
-    content: `거대수 만들려고 한건데 별로 안커짐. 처음 만들 때는 엄청 클 줄 알았는데 지금 보면 좀 애매함 ㅋㅋㅋ`,
-  },
-  {
-    id: "post-ascended-lore", slug: "ascended-lore", title: "어센디드 로어", category: "lore", tags: ["Numerical Ascension", "로어"],
-    createdAt: "2026-09-24T18:40:00+09:00", updatedAt: "2026-09-24T18:40:00+09:00",
-    content: `NA에 생각해놓은 8명의 어센디드들의 설정을 정리하는 중. 아직 바뀔 수 있음.\n\n각자 숫자를 다루는 방식이 달라야 재밌을 것 같아서 계속 뜯어고치고 있다.`,
-  },
-  {
-    id: "post-conical", slug: "conical-is-fun", title: "코니칼 재밌네", category: "geometry-dash", tags: ["지메", "레벨"],
-    createdAt: "2026-09-23T13:50:00+09:00", updatedAt: "2026-09-23T13:50:00+09:00",
-    content: `똥믈리에라고 하지 말고 내가 이틀만에 2분할을 해냈다는 사실에 집중해주셈.`,
-  },
-  {
-    id: "post-wamma", slug: "wamma", title: "왐마", category: "misc", tags: ["잡글"],
-    createdAt: "2026-09-22T21:15:00+09:00", updatedAt: "2026-09-22T21:15:00+09:00",
-    content: `이거 보셈. 존나 큰 벌레 발견함.\n\n사진은 나중에 올릴 수도 있고 아닐 수도 있음.`,
-  },
-  {
-    id: "post-neopack", slug: "why-i-left-neopack", title: "내가 네오팩을 버린이유", category: "neofactory", tags: ["마크", "NeoFactory"],
-    createdAt: "2026-09-21T09:00:00+09:00", updatedAt: "2026-09-21T09:00:00+09:00",
-    content: `뭔가 아무리 만들어도 그렉텍 느낌을 벗어나지 못해서 잠깐 멈춤. 버린 건 아니고 구석에 세워둔 상태임.`,
-  },
-  {
-    id: "post-math-study", slug: "i-hate-studying-math", title: "나는 수학공부가 싫다", category: "math", tags: ["수학", "잡생각"],
-    createdAt: "2026-09-20T12:25:00+09:00", updatedAt: "2026-09-20T12:25:00+09:00",
-    content: `한국은 주입식 교육이 문제임. 내 쌤은 그래도 괜찮은데 문제를 푸는 방식이 하나뿐인 것처럼 말할 때마다 좀 답답하다.`,
-  },
-];
+export let posts: Post[] = [];
 
 export function getCategory(id: string) { return categories.find((category) => category.id === id); }
 export function getCategoryPosts(id: string) {

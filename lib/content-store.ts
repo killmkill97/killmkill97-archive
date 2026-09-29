@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
-import { categories as sampleCategories, posts as samplePosts, type Category, type Post } from "@/lib/content";
+import { categories as sampleCategories, type Category, type Post } from "@/lib/content";
 
 type FirestoreTimestamp = { toDate?: () => Date } | Date | string | null | undefined;
 
@@ -59,7 +59,7 @@ export async function loadPublishedContent() {
     remotePosts = sortPosts(postSnapshot.docs.map((item) => postFromDoc(item.id, item.data())));
   } catch (error) {
     connected = false;
-    if (!isAbortError(error)) console.warn("Firestore public posts unavailable; using sample posts.", error);
+    if (!isAbortError(error)) console.warn("Firestore public posts unavailable.", error);
   }
 
   try {
@@ -72,7 +72,7 @@ export async function loadPublishedContent() {
     if (!isAbortError(error)) console.warn("Firestore categories unavailable; using sample categories.", error);
   }
 
-  return { posts: remotePosts.length ? remotePosts : samplePosts, categories: remoteCategories.length ? remoteCategories : sampleCategories, connected };
+  return { posts: remotePosts, categories: remoteCategories.length ? remoteCategories : sampleCategories, connected };
 }
 
 export async function getAdminStatus(uid: string) {
