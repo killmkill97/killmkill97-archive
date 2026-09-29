@@ -120,7 +120,7 @@ function AdminEditor() {
     event.preventDefault();
     if (!form.title.trim() || !form.slug.trim() || !form.content.trim()) { setMessage("제목, slug, 본문은 꼭 적어야 함."); return; }
     setBusy(true); setMessage("");
-    const input = { title: form.title.trim(), slug: form.slug.trim(), category: form.category, tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean), content: form.content, coverImage: form.coverImage.trim() || undefined, published: form.published };
+    const input = { title: form.title.trim(), slug: form.slug.trim(), category: form.category, tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean), content: form.content, coverImage: form.coverImage.trim(), published: form.published };
     try { if (form.id) await updatePost(form.id, input); else await savePost(input); setForm({ ...emptyEditor, category: form.category }); await refreshAdminPosts(); const content = await loadPublishedContent(); setContentData(content); setMessage(form.id ? "수정 저장했음." : "새 글을 게시했음."); } catch (error) { setMessage(error instanceof Error ? error.message : "저장에 실패했음."); } finally { setBusy(false); }
   }
   async function deletePost(id: string) { if (!window.confirm("이 글을 삭제할까?")) return; setBusy(true); try { await removePost(id); await refreshAdminPosts(); setMessage("삭제했음."); } catch { setMessage("삭제에 실패했음."); } finally { setBusy(false); } }
