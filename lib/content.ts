@@ -47,7 +47,24 @@ export function getSortedPosts(order: "newest" | "oldest" = "newest") {
   return [...posts].sort((a, b) => { const result = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); return order === "newest" ? result : -result; });
 }
 export function getPostCategory(post: Post) { return getCategory(post.category); }
-export function formatDate(date: string) { return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(date)).replace(/\. /g, ".").replace(/\.$/, ""); }
+export function formatDate(date: string) {
+  const value = new Date(date);
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const part = (type: string) => dateParts.find((item) => item.type === type)?.value ?? "";
+  const time = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(value);
+
+  return `${part("year")}.${part("month")}.${part("day")} ${time}`;
+}
 export function getExcerpt(markdown: string, length = 108) {
   const plainText = markdown.replace(/```[\s\S]*?```/g, "").replace(/[#>*_`\\[\\]$]/g, "").replace(/\s+/g, " ").trim();
   return plainText.length > length ? `${plainText.slice(0, length).trim()}...` : plainText;
