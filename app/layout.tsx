@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { MathJaxLoader } from "@/components/mathjax-loader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "killmkill97 — 개인 아카이브",
-  description: "내가 만든 거랑 생각난 거 올리는 곳.",
+  title: "killmkill97의 개인 사이트",
+  description: "killmkill97의 개인 창작물과 생각을 모아두는 곳.",
   other: {
     "codex-preview": "development",
   },
@@ -20,8 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="antialiased">{children}</body>
-      <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" />
+      <body className="antialiased">
+        <MathJaxLoader />
+        {children}
+      </body>
     </html>
   );
 }

@@ -16,9 +16,10 @@ export type Post = {
   createdAt: string;
   updatedAt: string;
   coverImage?: string;
+  published?: boolean;
 };
 
-export const categories: Category[] = [
+export let categories: Category[] = [
   { id: "math", name: "수학", description: "큰 수, 압축, 이상한 수학 실험", accent: "#8a5a44" },
   { id: "minecraft", name: "마크", description: "모드팩, 기계, 만들다 만 것들", accent: "#3d6b4e" },
   { id: "geometry-dash", name: "지메", description: "레벨과 얼티메이트 시리즈 기록", accent: "#4e6298" },
@@ -34,7 +35,7 @@ export const categories: Category[] = [
   { id: "lore", name: "로어", description: "어센디드들의 이야기", parentId: "numerical-ascension", accent: "#8864b5" },
 ];
 
-export const posts: Post[] = [
+export let posts: Post[] = [
   {
     id: "post-c8", slug: "c8-is-fun", title: "C(8) 이거 개재밌네 ㅋㅋㅋ", category: "c", tags: ["거대수", "C", "수학"],
     createdAt: "2026-09-29T14:20:00+09:00", updatedAt: "2026-09-29T14:20:00+09:00",
@@ -101,4 +102,9 @@ export function formatDate(date: string) { return new Intl.DateTimeFormat("ko-KR
 export function getExcerpt(markdown: string, length = 108) {
   const plainText = markdown.replace(/```[\s\S]*?```/g, "").replace(/[#>*_`\\[\\]$]/g, "").replace(/\s+/g, " ").trim();
   return plainText.length > length ? `${plainText.slice(0, length).trim()}...` : plainText;
+}
+
+export function setContentData(next: { posts: Post[]; categories: Category[] }) {
+  posts = next.posts;
+  categories = next.categories;
 }
