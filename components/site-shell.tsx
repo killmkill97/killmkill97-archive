@@ -10,6 +10,39 @@ import { loadMathJax } from "@/components/mathjax-loader";
 type SiteShellProps = { route: string[] };
 const SITE_BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 const navItems = [{ href: "/", label: "홈" }, { href: "/all", label: "모든 글" }, { href: "/toc", label: "목차" }, { href: "/about", label: "소개" }];
+const homeEasterEggPhrase = "나에게 빛이 있으라 너에게도 빛이 있으라 우리 모두에겐 그럴 힘이 있다 아니야 아니야 그건 착시고 망상이야 그만둬 그만두라고 이곳에서 더이상의 300년 안돼 돌아가야해";
+const twoSetInitials = ["r", "R", "s", "e", "E", "f", "a", "q", "Q", "t", "T", "d", "w", "W", "c", "z", "x", "v", "g"];
+const twoSetVowels = ["k", "o", "i", "O", "j", "p", "u", "P", "h", "hk", "ho", "hl", "y", "n", "nj", "np", "nl", "b", "m", "ml", "l"];
+const twoSetFinals = ["", "r", "R", "rt", "s", "sw", "sg", "e", "f", "fr", "fa", "fq", "ft", "fx", "fv", "fg", "a", "q", "qt", "t", "T", "d", "w", "c", "z", "x", "v", "g"];
+
+function twoSetKeyToken(key: string) {
+  if (key === " ") return "Space";
+  if (/^[0-9]$/.test(key)) return `Digit${key}`;
+  const shifted = key >= "A" && key <= "Z";
+  return `Key${key.toUpperCase()}:${shifted ? "shift" : "plain"}`;
+}
+
+function twoSetKeysForText(text: string) {
+  const keys: string[] = [];
+  for (const character of text.normalize("NFC")) {
+    if (character === " " || /^[0-9]$/.test(character)) {
+      keys.push(twoSetKeyToken(character));
+      continue;
+    }
+    const syllable = character.charCodeAt(0) - 0xac00;
+    if (syllable >= 0 && syllable <= 11171) {
+      const initial = Math.floor(syllable / 588);
+      const vowel = Math.floor((syllable % 588) / 28);
+      const final = syllable % 28;
+      for (const key of `${twoSetInitials[initial]}${twoSetVowels[vowel]}${twoSetFinals[final]}`) keys.push(twoSetKeyToken(key));
+      continue;
+    }
+    if (/^[a-zA-Z]$/.test(character)) keys.push(twoSetKeyToken(character));
+  }
+  return keys;
+}
+
+const homeEasterEggKeys = twoSetKeysForText(homeEasterEggPhrase);
 
 export function SiteShell({ route }: SiteShellProps) {
   const [dark, setDark] = useState(false);
@@ -41,6 +74,40 @@ export function SiteShell({ route }: SiteShellProps) {
     const stored = window.localStorage.getItem("killmkill97-theme");
     setDark(stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches);
   }, []);
+
+  useEffect(() => {
+    if (activeRoute.length !== 0) return;
+    let typedKeys: string[] = [];
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.ctrlKey || event.altKey || event.metaKey || event.repeat) return;
+      if (event.key === "Backspace") {
+        typedKeys.pop();
+        return;
+      }
+      if (event.key === "Escape") {
+        typedKeys = [];
+        return;
+      }
+
+      let pressedKeys: string[] = [];
+      if (event.code === "Space") pressedKeys = ["Space"];
+      else if (/^Digit[0-9]$/.test(event.code) && !event.shiftKey) pressedKeys = [event.code];
+      else if (/^Key[A-Z]$/.test(event.code)) pressedKeys = [`${event.code}:${event.shiftKey ? "shift" : "plain"}`];
+      else if (event.key.length === 1) pressedKeys = twoSetKeysForText(event.key);
+
+      if (!pressedKeys.length) return;
+      typedKeys.push(...pressedKeys);
+      typedKeys = typedKeys.slice(-homeEasterEggKeys.length);
+      if (typedKeys.length === homeEasterEggKeys.length && typedKeys.every((key, index) => key === homeEasterEggKeys[index])) {
+        typedKeys = [];
+        window.alert("willy rodriguez");
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeRoute]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
