@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from "firebase/auth";
-import { categories, formatDate, getCategory, getCategoryPosts, getExcerpt, getPostBySlug, getPostCategory, getSortedPosts, setContentData, type Post } from "@/lib/content";
+import { categories, formatDate, getCategory, getCategoryPosts, getCategoryTagCounts, getExcerpt, getPostBySlug, getPostCategory, getSortedPosts, setContentData, type Post } from "@/lib/content";
 import { firebaseAuth } from "@/lib/firebase";
 import { getAdminStatus, loadAdminPosts, loadPublishedContent, removePost, savePost, updatePost } from "@/lib/content-store";
 import { loadMathJax } from "@/components/mathjax-loader";
@@ -86,8 +86,36 @@ function Header({ dark, onToggleTheme }: { dark: boolean; onToggleTheme: () => v
 
 function HomePage() { const recent = getSortedPosts().slice(0, 6); const categoryCount = categories.filter((category) => !category.parentId).length; return <div className="page-stack home-page"><section className="intro-block"><p className="eyebrow">PERSONAL ARCHIVE / 2026—</p><h1>killmkill97의<br /><em>개인 사이트</em></h1><p className="intro-copy">수학도 하고, 마크도 하고, 게임도 만들고, 가끔은 그냥 이상한 걸 발견함.</p><div className="intro-meta"><span>posts {getSortedPosts().length}</span><span>categories {categoryCount}</span><span>last updated {recent[0] ? formatDate(recent[0].updatedAt) : "—"}</span></div></section><section className="section-block"><div className="section-heading"><div><p className="eyebrow">RECENTLY WRITTEN</p><h2>최근 글</h2></div><Link className="text-link" href="/all">모든 글 보기 <span>↗</span></Link></div><div className="post-list">{recent.length ? recent.map((post) => <PostCard key={post.id} post={post} />) : <EmptyState text="아직 공개된 글이 없음. 첫 글을 관리자에서 작성해보셈." />}</div></section><section className="home-scrap"><span className="scrap-label">메모</span><p>이번 주엔 또 뭘 만들지 모르겠음. 일단 기록은 해두자.</p><span className="scrap-mark">*</span></section></div>; }
 function AllPostsPage() { const [queryText, setQueryText] = useState(""); const [order, setOrder] = useState<"newest" | "oldest">("newest"); const listedPosts = useMemo(() => { const normalized = queryText.toLowerCase().trim(); return getSortedPosts(order).filter((post) => !normalized || `${post.title} ${post.content} ${post.tags.join(" ")}`.toLowerCase().includes(normalized)); }, [order, queryText]); return <div className="page-stack"><PageIntro eyebrow="ALL POSTS" title="모든 글" copy="분류 상관없이 적어둔 것들을 시간순으로 모아봄." /><div className="list-tools"><label className="search-box"><span aria-hidden="true">⌕</span><input value={queryText} onChange={(event) => setQueryText(event.target.value)} placeholder="제목이나 내용 검색" aria-label="제목이나 내용 검색" /></label><select value={order} onChange={(event) => setOrder(event.target.value as "newest" | "oldest")} aria-label="정렬 순서"><option value="newest">최신순</option><option value="oldest">오래된순</option></select></div><p className="result-count">{listedPosts.length}개의 글{queryText ? ` · '${queryText}' 검색 결과` : ""}</p><div className="post-list">{listedPosts.length ? listedPosts.map((post) => <PostCard key={post.id} post={post} />) : <EmptyState text={queryText ? "검색 결과가 없음. 다른 단어로 찾아보셈." : "아직 공개된 글이 없음."} />}</div></div>; }
-function TocPage() { const roots = categories.filter((category) => !category.parentId); return <div className="page-stack"><PageIntro eyebrow="TABLE OF CONTENTS" title="목차" copy="분류는 나중에 마음대로 바꿀 수 있게 데이터로 관리 중." /><div className="toc-grid">{roots.map((category) => { const children = categories.filter((item) => item.parentId === category.id); return <section className="toc-group" key={category.id}><Link href={`/category/${category.id}`} className="toc-root"><span className="category-dot" style={{ backgroundColor: category.accent }} />{category.name}<span className="toc-arrow">↗</span></Link><p>{category.description}</p>{children.length ? <ul>{children.map((child) => <li key={child.id}><Link href={`/category/${child.id}`}>{child.name}<span>{getCategoryPosts(child.id).length}</span></Link></li>)}</ul> : <span className="toc-empty">아직 하위 분류 없음</span>}</section>; })}</div></div>; }
-function CategoryPage({ categoryId }: { categoryId: string }) { const category = getCategory(categoryId); const categoryPosts = category ? getSortedPosts().filter((post) => getCategoryPosts(category.id).some((item) => item.id === post.id)) : []; if (!category) return <NotFoundPage />; return <div className="page-stack"><PageIntro eyebrow="CATEGORY" title={category.name} copy={category.description} /><div className="category-toolbar"><Link className="back-link" href="/toc">← 목차로</Link><span>{categoryPosts.length}개의 글</span></div><div className="post-list">{categoryPosts.length ? categoryPosts.map((post) => <PostCard key={post.id} post={post} />) : <EmptyState text="아직 이 분류에 적어둔 글이 없음." />}</div></div>; }
+function TocPage() {
+  const roots = categories.filter((category) => !category.parentId);
+  return <div className="page-stack">
+    <PageIntro eyebrow="TABLE OF CONTENTS" title="목차" copy="글에 붙인 태그가 카테고리 아래에 자동으로 모임." />
+    <div className="toc-grid">{roots.map((category) => {
+      const tags = getCategoryTagCounts(category.id);
+      return <section className="toc-group" key={category.id}>
+        <Link href={`/category/${category.id}`} className="toc-root"><span className="category-dot" style={{ backgroundColor: category.accent }} />{category.name}<span className="toc-arrow">↗</span></Link>
+        <p>{category.description}</p>
+        {tags.length ? <ul>{tags.map(({ tag, count }) => <li key={tag}><Link href={`/category/${category.id}?tag=${encodeURIComponent(tag)}`}>{tag}<span>{count}</span></Link></li>)}</ul> : <span className="toc-empty">아직 태그가 붙은 글이 없음</span>}
+      </section>;
+    })}</div>
+  </div>;
+}
+function CategoryPage({ categoryId }: { categoryId: string }) {
+  const category = getCategory(categoryId);
+  const [selectedTag, setSelectedTag] = useState("");
+  useEffect(() => {
+    setSelectedTag(new URLSearchParams(window.location.search).get("tag")?.trim() ?? "");
+  }, []);
+  const categoryPosts = category
+    ? getSortedPosts().filter((post) => getCategoryPosts(category.id).some((item) => item.id === post.id) && (!selectedTag || post.tags.includes(selectedTag)))
+    : [];
+  if (!category) return <NotFoundPage />;
+  return <div className="page-stack">
+    <PageIntro eyebrow="CATEGORY" title={selectedTag ? `${category.name} · ${selectedTag}` : category.name} copy={selectedTag ? `${category.description} · #${selectedTag} 태그로 모아봄.` : category.description} />
+    <div className="category-toolbar"><Link className="back-link" href="/toc">← 목차로</Link>{selectedTag ? <Link className="back-link" href={`/category/${category.id}`}>모든 태그 보기</Link> : null}<span>{categoryPosts.length}개의 글</span></div>
+    <div className="post-list">{categoryPosts.length ? categoryPosts.map((post) => <PostCard key={post.id} post={post} />) : <EmptyState text={selectedTag ? `#${selectedTag} 태그의 글이 아직 없음.` : "아직 이 분류에 적어둔 글이 없음."} />}</div>
+  </div>;
+}
 function PostPage({ slug }: { slug: string }) { const post = getPostBySlug(slug); if (!post) return <NotFoundPage />; const category = getPostCategory(post); const sorted = getSortedPosts(); const index = sorted.findIndex((item) => item.id === post.id); return <article className="post-page"><div className="post-breadcrumb"><Link href="/">홈</Link><span>›</span><Link href={`/category/${category?.id ?? post.category}`}>{category?.name ?? post.category}</Link><span>›</span><span>{post.tags[0]}</span></div><header className="post-header"><p className="eyebrow">{formatDate(post.createdAt)} · {category?.name}</p><h1>{post.title}</h1><div className="tag-row">{post.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></header><div className="post-divider" /><MarkdownContent source={post.content} />{post.coverImage ? <img className="post-cover" src={post.coverImage} alt="" /> : null}<div className="post-footer-note">댓글로 의견 남겨주세요. <small>(진짜 댓글창은 아직 없음)</small></div><div className="post-navigation"><PostNavLink label="이전 글" post={sorted[index + 1]} direction="left" /><PostNavLink label="다음 글" post={sorted[index - 1]} direction="right" /></div></article>; }
 function PostNavLink({ label, post, direction }: { label: string; post?: Post; direction: "left" | "right" }) { return post ? <Link className={`post-nav-link ${direction}`} href={`/post/${post.slug}`}><span>{direction === "left" ? "←" : "→"}</span><small>{label}</small><strong>{post.title}</strong></Link> : <span className="post-nav-link disabled"><span>{direction === "left" ? "←" : "→"}</span><small>{label}</small><strong>없음</strong></span>; }
 function AboutPage() { return <div className="page-stack about-page"><PageIntro eyebrow="ABOUT THIS PLACE" title="소개" copy="대단한 포트폴리오는 아니고, 그냥 뭔가를 만들면서 남겨두는 개인 홈페이지." /><div className="about-grid"><div><p>사이트 주인은 <strong>killmkill97</strong>임.</p><p>수학, 마인크래프트, 지메, Numerical Ascension 같은 걸 건드리고 있음. 완성된 결과보다 만들다가 생긴 생각이나 실패한 것도 여기에 적어둘 예정.</p></div><dl><div><dt>여기서 하는 일</dt><dd>만들기 · 기록하기 · 다시 뜯어고치기</dd></div><div><dt>글 쓰는 방식</dt><dd>Markdown 기반, 편한 말투</dd></div><div><dt>댓글</dt><dd>아직 없음. 의견은 어딘가로 보내주셈</dd></div></dl></div><Link className="text-link" href="/all">글 보러 가기 <span>↗</span></Link></div>; }

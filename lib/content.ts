@@ -42,6 +42,15 @@ export function getCategoryPosts(id: string) {
   const childIds = categories.filter((category) => category.parentId === id).map((category) => category.id);
   return posts.filter((post) => post.category === id || childIds.includes(post.category));
 }
+export function getCategoryTagCounts(id: string) {
+  const counts = new Map<string, number>();
+  for (const post of getCategoryPosts(id)) {
+    for (const tag of new Set(post.tags.map((value) => value.trim()).filter(Boolean))) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts].map(([tag, count]) => ({ tag, count })).sort((left, right) => left.tag.localeCompare(right.tag, "ko"));
+}
 export function getPostBySlug(slug: string) { return posts.find((post) => post.slug === slug); }
 export function getSortedPosts(order: "newest" | "oldest" = "newest") {
   return [...posts].sort((a, b) => { const result = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); return order === "newest" ? result : -result; });
