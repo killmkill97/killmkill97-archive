@@ -38,6 +38,12 @@ pnpm build:github-pages
 
 ## GitHub Pages 배포
 
+배포 시 공개된 Firestore 글을 읽어 각 글/카테고리/목차/목록을 본문이 들어 있는 HTML로 생성한다. JavaScript를 실행하지 않는 크롤러도 내용을 읽을 수 있으며, 글 주소가 실제 정적 파일로 제공된다. 페이지별 canonical, Open Graph, BlogPosting 구조화 데이터와 `sitemap.xml`도 함께 생성한다. 관리자 페이지는 noindex이며 사이트맵에 포함하지 않는다.
+
+글 저장은 Firestore에 즉시 반영되며, 크롤러용 HTML은 GitHub Actions가 매시 17분/47분(UTC)에 다시 생성한다. 예약 실행은 GitHub 사정에 따라 늦어질 수 있다. 즉시 갱신하려면 Actions의 Deploy to GitHub Pages → Run workflow를 실행한다. 글 삭제/비공개 변경도 다음 성공한 배포에서 정적 HTML에 반영되므로 급한 삭제라면 수동 배포도 실행해야 한다. 공개 저장소 예약 워크플로는 저장소 활동이 장기간 없으면 GitHub에서 비활성화할 수 있으므로 Actions 상태를 확인한다.
+
+Search Console에서 `https://killmkill97.github.io/killmkill97-archive/` URL 접두어 속성을 등록하고 `sitemap.xml`을 제출할 수 있다. 검색엔진의 수집·색인은 별도 일정으로 진행되며 노출을 보장하지 않는다. 이 프로젝트는 하위 경로에 있으므로 프로젝트 안의 robots.txt는 호스트 루트의 `/robots.txt`를 대체하지 못한다. 루트 파일에 차단 규칙이 있다면 사용자 Pages 저장소에서 수정해야 한다.
+
 `main`에 푸시하면 `.github/workflows/github-pages.yml`이 정적 사이트를 빌드하고 GitHub Pages에 배포한다. 저장소 주소가 하위 경로를 쓰므로 빌드 경로는 `/killmkill97-archive/`로 설정되어 있다. 글/카테고리는 브라우저에서 Firestore를 읽고, 관리자 글쓰기도 기존 Firebase 로그인을 사용한다.
 
 처음 한 번은 GitHub 저장소의 **Settings → Pages → Build and deployment → Source**를 `GitHub Actions`로 설정한다. 그리고 **Settings → Secrets and variables → Actions → New repository secret**에서 `.env.local`의 Firebase 웹 설정 여섯 값을 같은 이름으로 등록한다.
